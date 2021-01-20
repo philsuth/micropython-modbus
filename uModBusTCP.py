@@ -11,9 +11,10 @@ import random
 class uModBusTCP:
 
     def __init__(self, slave_ip, slave_port=502, timeout=5):
-        self._sock = socket.socket()
-        self._sock.connect(socket.getaddrinfo(slave_ip, slave_port)[0][-1])
-        self._sock.settimeout(timeout)
+        self._ip = slave_ip
+        self._port = slave_port
+        self._timeout = timeout
+        self._sock = None
 
     def _create_mbap_hdr(self, slave_id, modbus_pdu):
         trans_id = random.randint(0, 65535) & 0xFFFF
@@ -53,7 +54,13 @@ class uModBusTCP:
         return response[hdr_length:]
 
     def _send_receive(self, slave_id, modbus_pdu, count):
+        if self._sock is None:
+            self._sock = socket.socket()
+            self._sock.settimeout(self._timeout)
+            self._sock.connect(socket.getaddrinfo(self._ip, self._port)[0][-1])
+        
         mbap_hdr, trans_id = self._create_mbap_hdr(slave_id, modbus_pdu)
+
         self._sock.send(mbap_hdr + modbus_pdu)
 
         response = self._sock.recv(256)
@@ -131,3 +138,5 @@ class uModBusTCP:
 
     def close(self):
         self._sock.close()
+        self._sock = None
+        
